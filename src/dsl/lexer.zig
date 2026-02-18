@@ -80,6 +80,7 @@ pub const Token = struct {
     token_type: TokenType,
     line: usize,
     position_inside_file: [2]usize, // [start, current]
+    lexem: ?[]u8,
 };
 
 pub fn init(source: []const u8) Self {
@@ -109,8 +110,8 @@ fn peek(self: Self) LexerErrors!u8 {
     return self.source[self.current];
 }
 
-fn addToken(self: *Self, token_type: TokenType, line: usize, start: usize, current: usize) !void {
-    const token = Token{ .line = line, .position_inside_file = [_]usize{ start, current }, .token_type = token_type };
+fn addToken(self: *Self, token_type: TokenType, line: usize, start: usize, current: usize, lexem: ?[]u8) !void {
+    const token = Token{ .line = line, .position_inside_file = [_]usize{ start, current }, .token_type = token_type, .lexem = lexem };
     try token_list.append(self.allocator, token);
 }
 
@@ -153,17 +154,21 @@ fn number(self: *Self) LexerErrors!TokenType {
     }
 }
 
-fn string(self: *Self) LexerErrors!TokenType {
+fn string(self: *Self, str: *?[]u8) LexFuncErrors!TokenType {
+    var str_inner: ArrayList(u8) = .empty;
     while (try self.peek() != '"') {
-        const c: u8 = try self.advance();
-        if (c == '\\') _ = try self.advance();
+        var c: u8 = try self.advance();
+        if (c == '\\') c = try self.advance();
+        try str_inner.append(self.allocator, c);
     }
     _ = try self.advance();
+    str.* = str_inner.items;
     return .STRING;
 }
 
 pub fn lex(self: *Self) LexFuncErrors!TokenList {
     while (!self.atEnd()) {
+        var lexem: ?[]u8 = null;
         const c: u8 = try self.advance();
         self.start = self.current;
         const newToken = switch (c) {
@@ -204,14 +209,14 @@ pub fn lex(self: *Self) LexFuncErrors!TokenList {
             ';' => .SEMICOLON,
             ':' => .COLON,
             '0'...'9' => try self.number(),
-            '"' => try self.string(),
+            '"' => try self.string(&lexem),
             // TODO: make identifiers work
             else => {
                 break;
             },
         };
-        try self.addToken(newToken, self.line, self.start, self.current);
+        try self.addToken(newToken, self.line, self.start, self.current, lexem);
     }
-    try self.addToken(.EOF, self.line, self.current, self.current);
+    try self.addToken(.EOF, self.line, self.current, self.current, null);
     return token_list;
 }
