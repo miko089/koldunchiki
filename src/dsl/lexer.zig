@@ -153,6 +153,15 @@ fn number(self: *Self) LexerErrors!TokenType {
     }
 }
 
+fn string(self: *Self) LexerErrors!TokenType {
+    while (try self.peek() != '"') {
+        const c: u8 = try self.advance();
+        if (c == '\\') _ = try self.advance();
+    }
+    _ = try self.advance();
+    return .STRING;
+}
+
 pub fn lex(self: *Self) LexFuncErrors!TokenList {
     while (!self.atEnd()) {
         const c: u8 = try self.advance();
@@ -195,7 +204,8 @@ pub fn lex(self: *Self) LexFuncErrors!TokenList {
             ';' => .SEMICOLON,
             ':' => .COLON,
             '0'...'9' => try self.number(),
-            // TODO: make integers, string and identifiers work
+            '"' => try self.string(),
+            // TODO: make identifiers work
             else => {
                 break;
             },
