@@ -154,6 +154,7 @@ fn number(self: *Self) LexerErrors!TokenType {
     }
 }
 
+// TODO: \n and such things should be meow
 fn string(self: *Self, str: *?[]u8) LexFuncErrors!TokenType {
     var str_inner: ArrayList(u8) = .empty;
     while (try self.peek() != '"') {
@@ -166,8 +167,22 @@ fn string(self: *Self, str: *?[]u8) LexFuncErrors!TokenType {
     return .STRING;
 }
 
+fn isAlphaNumericUnderscore(c: u8) bool {
+    return isDigit(c) or (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z') or c == '_';
+}
+
+fn identifier(self: *Self) LexFuncErrors!TokenType {
+    while (true) {
+        const c = try self.peek();
+        if (!isAlphaNumericUnderscore(c)) break;
+        _ = try self.advance();
+    }
+    return .IDENTIFIER;
+}
+
 pub fn lex(self: *Self) LexFuncErrors!TokenList {
     while (!self.atEnd()) {
+        // Only string has such thing cause "\\\\" != \\\\; "\\\\" == \\
         var lexem: ?[]u8 = null;
         const c: u8 = try self.advance();
         self.start = self.current;
@@ -210,7 +225,7 @@ pub fn lex(self: *Self) LexFuncErrors!TokenList {
             ':' => .COLON,
             '0'...'9' => try self.number(),
             '"' => try self.string(&lexem),
-            // TODO: make identifiers work
+            'a'...'z', 'A'...'Z', '_' => try self.identifier(),
             else => {
                 break;
             },
