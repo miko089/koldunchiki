@@ -11,4 +11,6 @@ jobs:
           version: 0.15.2
       - name: "Run tests"
         run: |
+          ls -l
+          tree -l
           zig test src/*/*.zig
