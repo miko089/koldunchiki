@@ -4,7 +4,7 @@ const Lexer = @import("lexer.zig");
 pub fn main() !void {
     const source =
         \\ pub fn meow(arg1: i32) void {
-        \\     if (arg1 != 3.14.15 and 3 | 2 == 7) {
+        \\     if (arg1 != 3.1415 and 3 | 2 == 7) {
         \\         print("nya");
         \\     }
         \\     print("{}", arg1);

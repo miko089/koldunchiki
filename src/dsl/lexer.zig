@@ -101,7 +101,7 @@ pub fn init(source: []const u8) Self {
 }
 
 inline fn atEnd(self: Self) bool {
-    return self.current >= self.source.len - 1;
+    return self.current >= self.source.len;
 }
 
 inline fn atEndErr(self: *Self) !void {
