@@ -94,6 +94,7 @@ pub const Token = struct {
 };
 
 pub fn init(source: []const u8) Self {
+    token_list = .empty;
     return Self{
         .source = source,
         .allocator = allocator_specific.allocator(),
@@ -304,4 +305,59 @@ pub fn lex(self: *Self) !TokenList {
     }
     try self.addToken(.EOF, self.line, self.current, self.current, null);
     return token_list;
+}
+
+fn expectTokens(source: []const u8, expected: []const TokenType) !void {
+    var lexer: Self = .init(source);
+    const tokens = try lexer.lex();
+    // std.debug.print("{any}", .{tokens.items});
+    try std.testing.expectEqual(expected.len + 1, tokens.items.len); // +1 for EOF
+    for (expected, 0..) |expected_type, i| {
+        try std.testing.expectEqual(expected_type, tokens.items[i].token_type);
+    }
+}
+
+test "operators" {
+    try expectTokens("+ - * /", &.{ .PLUS, .MINUS, .MUL, .DIV });
+    try expectTokens("++ --", &.{ .INCREMENT, .DECREMENT });
+    try expectTokens("+= -= *= /=", &.{ .PLUS_EQ, .MINUS_EQ, .MUL_EQ, .DIV_EQ });
+}
+
+test "comparison operators" {
+    try expectTokens("< > <= >= == !=", &.{ .LESS, .MORE, .LESS_EQ, .MORE_EQ, .EQUAL_EQ, .BANG_EQ });
+}
+
+test "bitwise shift" {
+    try expectTokens("<< >> <<= >>=", &.{ .BW_SHIFT_LEFT, .BW_SHIFT_RIGHT, .BW_SHIFT_LEFT_EQ, .BW_SHIFT_RIGHT_EQ });
+}
+
+test "string with escape sequences" {
+    try expectTokens("\"hello\\nworld\"", &.{.STRING});
+
+    var lexer: Self = .init("\"hello\\nworld\"");
+    const tokens = try lexer.lex();
+    try std.testing.expectEqualStrings("hello\nworld", tokens.items[0].lexem.?);
+}
+
+test "number types" {
+    try expectTokens("42", &.{.INTEGER});
+    try expectTokens("3.14", &.{.DOUBLE});
+}
+
+test "error cases" {
+    var lexer: Self = .init("\"unterminated");
+    try std.testing.expectError(error.UnexpectedEndOfFile, lexer.lex());
+
+    var lexer2: Self = .init("\"bad\\ escape\"");
+    try std.testing.expectError(error.InvalidEscapeCharacter, lexer2.lex());
+
+    var lexer3: Self = .init("1.2.3");
+    try std.testing.expectError(error.UnexpectedSymbol, lexer3.lex());
+}
+
+test "line tracking" {
+    var lexer: Self = .init("a\nb");
+    const tokens = try lexer.lex();
+    try std.testing.expectEqual(@as(usize, 1), tokens.items[0].line);
+    try std.testing.expectEqual(@as(usize, 2), tokens.items[1].line);
 }
