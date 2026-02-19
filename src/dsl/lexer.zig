@@ -14,8 +14,9 @@ var allocator_specific: std.heap.GeneralPurposeAllocator(.{}) = .init;
 var token_list: TokenList = .empty;
 
 pub const LexerErrors = error{
-    EndOfFile,
+    UnexpectedEndOfFile,
     UnexpectedSymbol,
+    InvalidEscapeCharacter,
 };
 
 pub const TokenType = enum {
@@ -95,7 +96,7 @@ fn atEnd(self: Self) bool {
 }
 
 inline fn atEndErr(self: Self) LexerErrors!void {
-    if (self.atEnd()) return error.EndOfFile;
+    if (self.atEnd()) return error.UnexpectedEndOfFile;
 }
 
 fn advance(self: *Self) LexerErrors!u8 {
@@ -159,7 +160,24 @@ fn string(self: *Self, str: *?[]u8) LexFuncErrors!TokenType {
     var str_inner: ArrayList(u8) = .empty;
     while (try self.peek() != '"') {
         var c: u8 = try self.advance();
-        if (c == '\\') c = try self.advance();
+        if (c == '\\') {
+            const char = try self.advance();
+            c = switch (char) {
+                'a' => 0x07,
+                'b' => 0x08,
+                'e' => 0x1B,
+                'f' => 0x0C,
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                'v' => 0x0B,
+                '\\' => '\\',
+                '\'' => '\'',
+                '\"' => '\"',
+                '?' => 0x3F,
+                else => return error.InvalidEscapeCharacter,
+            };
+        }
         try str_inner.append(self.allocator, c);
     }
     _ = try self.advance();

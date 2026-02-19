@@ -12,7 +12,7 @@ pub fn main() !void {
         \\ \\\\\\\
         \\ 67 67 67 67 67 67.676767 67.6767
         \\ (67.45).meow()
-        \\ "mew" "meow" "" "\2\\\""
+        \\ "mew" "meow" "" "\n\\\""
     ;
     var lexer: Lexer = .init(source[0..]);
     const res = try lexer.lex();
