@@ -1,0 +1,16 @@
+
+
+expression          -> literal | prefix_unary | postfix_unary | binary | grouping ;
+
+literal             -> DOUBLE | INTEGER | STRING | "true" | "false" ;
+
+prefix_unary        -> ("!" | "++" | "--" | "-") expression ;
+postfix_unary       -> expression ("--" | "++") ;
+
+operator            -> "<" | "<=" | "+" | "*" | "&" | "^" | "=="
+                     | ">" | ">=" | "-" | "/" | "|" | "%" | "!=" 
+                     | ">>" | "<<" ;
+
+binary              -> exression operator expression ;
+
+grouping            -> "(" expression ")" ;
